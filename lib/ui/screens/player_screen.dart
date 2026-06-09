@@ -19,15 +19,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     
-    // Correct initialization configuration for media_kit
+    // Fixed configuration parameter formatting
     player = Player(
-      configuration: const PlayerConfiguration(
-        ready: true,
-      ),
+      configuration: const PlayerConfiguration(),
     );
     controller = VideoController(player);
 
-    // Open the stream directly using a Media object
+    // Stream playback initialization
     player.open(Media(widget.channel.streamUrl.trim()));
     
     setState(() {
