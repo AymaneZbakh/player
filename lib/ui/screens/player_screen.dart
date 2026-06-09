@@ -11,15 +11,28 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
-  late final Player player = Player();
-  late final VideoController controller = VideoController(player);
+  late final Player player;
+  late final VideoController controller;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    player.setProperty('user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-    player.setProperty('referrer', 'https://www.google.com/');
+    
+    // Correct initialization configuration for media_kit
+    player = Player(
+      configuration: const PlayerConfiguration(
+        ready: true,
+      ),
+    );
+    controller = VideoController(player);
+
+    // Open the stream directly using a Media object
     player.open(Media(widget.channel.streamUrl.trim()));
+    
+    setState(() {
+      _isInitialized = true;
+    });
   }
 
   @override
@@ -32,15 +45,40 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: Text(widget.channel.name), backgroundColor: Colors.transparent),
+      appBar: AppBar(
+        title: Text(widget.channel.name), 
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+      ),
       body: Column(
         children: [
           Expanded(
             child: Center(
-              child: AspectRatio(aspectRatio: 16 / 9, child: Video(controller: controller)),
+              child: AspectRatio(
+                aspectRatio: 16 / 9, 
+                child: _isInitialized 
+                    ? Video(controller: controller)
+                    : const Center(child: CircularProgressIndicator(color: Colors.white)),
+              ),
             ),
           ),
-          Padding(padding: const EdgeInsets.all(16.0), child: Text(widget.channel.name, style: const TextStyle(fontSize: 18, color: Colors.white))),
+          Padding(
+            padding: const EdgeInsets.all(16.0), 
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.channel.name, 
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.channel.groupTitle, 
+                  style: const TextStyle(color: Colors.white54),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
