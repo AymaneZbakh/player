@@ -24,8 +24,10 @@ jobs:
       with:
         channel: 'stable'
 
-    - name: Enable Windows Desktop Build
-      run: flutter config --enable-windows-desktop
+    - name: Enable and Create Windows Desktop Build Files
+      run: |
+        flutter config --enable-windows-desktop
+        flutter create . --platforms=windows
 
     - name: Download App Dependencies
       run: flutter pub get
