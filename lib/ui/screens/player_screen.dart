@@ -18,16 +18,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
-    
-    // Fixed configuration parameter formatting
-    player = Player(
-      configuration: const PlayerConfiguration(),
-    );
+    player = Player(configuration: const PlayerConfiguration());
     controller = VideoController(player);
 
-    // Stream playback initialization
     player.open(Media(widget.channel.streamUrl.trim()));
-    
     setState(() {
       _isInitialized = true;
     });
@@ -41,43 +35,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(widget.channel.name), 
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: AspectRatio(
-                aspectRatio: 16 / 9, 
-                child: _isInitialized 
-                    ? Video(controller: controller)
-                    : const Center(child: CircularProgressIndicator(color: Colors.white)),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0), 
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.channel.name, 
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.channel.groupTitle, 
-                  style: const TextStyle(color: Colors.white54),
-                ),
-              ],
-            ),
-          ),
-        ],
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: _isInitialized
+            ? Video(controller: controller, controls: MaterialVideoControls)
+            : const CircularProgressIndicator(color: Color(0xFF3B82F6)),
       ),
     );
   }
