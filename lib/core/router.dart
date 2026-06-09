@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/models/playlist.dart';
 import '../ui/screens/home_screen.dart';
 import '../ui/screens/channel_dashboard_screen.dart';
+import '../ui/screens/settings_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -14,6 +15,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/channels',
         builder: (context, state) => ChannelDashboardScreen(playlist: state.extra as Playlist),
       ),
+      GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
     ],
   );
 });
