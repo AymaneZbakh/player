@@ -4,7 +4,6 @@ import '../data/models/playlist.dart';
 import '../data/parsers/m3u_parser.dart';
 import '../data/repositories/playlist_repository.dart';
 
-// Master Data List Store for Saved Playlists
 final playlistsProvider = StateNotifierProvider<PlaylistsNotifier, List<Playlist>>((ref) {
   return PlaylistsNotifier(ref.watch(playlistRepositoryProvider));
 });
@@ -24,54 +23,82 @@ class PlaylistsNotifier extends StateNotifier<List<Playlist>> {
   }
 }
 
-// Global UI Navigation Filters
+// Global UI Layout Navigation Selectors
+final activeModuleProvider = StateProvider<MediaType>((ref) => MediaType.live);
 final activeCategoryProvider = StateProvider<String?>((ref) => null);
-final activeModuleProvider = StateProvider<String>((ref) => 'Live TV');
 final searchFilterProvider = StateProvider<String>((ref) => '');
 final selectedChannelProvider = StateProvider<Channel?>((ref) => null);
+final customFoldersProvider = StateProvider<List<String>>((ref) => ['⭐ Favorite Channels', '🎬 Watch Later', '🎵 Music Mix']);
 
-// In-Memory Master Registry for channels of the actively loaded playlist
+// In-Memory Master Array Registry
 final rawChannelsProvider = StateProvider<List<Channel>>((ref) => []);
 
-// Custom Created User Folders Registry Map (ID -> Name)
-final customFoldersProvider = StateNotifierProvider<FolderNotifier, Map<String, String>>((ref) {
-  return FolderNotifier();
-});
-
-class FolderNotifier extends StateNotifier<Map<String, String>> {
-  FolderNotifier() : super({'fav': '⭐ Pin Top Section'});
-  void createFolder(String name) {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
-    state = {...state, id: name};
-  }
-}
-
-// Reactive UI Processor Core: Combines Search Filters & Sidebar Group Category Rules
+// High-Density Core Processor: Filters on type, sub-category tabs, and query text simultaneously
 final processedChannelsProvider = Provider<List<Channel>>((ref) {
   final channels = ref.watch(rawChannelsProvider);
+  final activeMod = ref.watch(activeModuleProvider);
   final activeCat = ref.watch(activeCategoryProvider);
   final search = ref.watch(searchFilterProvider).toLowerCase();
 
   return channels.where((ch) {
-    final matchesSearch = ch.name.toLowerCase().contains(search) || ch.groupTitle.toLowerCase().contains(search);
-    final matchesCategory = activeCat == null || ch.groupTitle == activeCat;
-    return matchesSearch && matchesCategory;
+    if (ch.type != activeMod) return false;
+    if (activeCat != null && ch.groupTitle != activeCat) return false;
+    if (search.isNotEmpty) {
+      return ch.name.toLowerCase().contains(search) || ch.groupTitle.toLowerCase().contains(search);
+    }
+    return true;
   }).toList();
 });
 
-// Resilient Async Playlist Loader Pipeline
-final channelsProvider = FutureProvider.family<List<Channel>, String>((ref, url) async {
-  final channels = await M3UParser().fetchAndParse(url);
+// Intelligent Streaming Intake Parser Pipeline
+final channelsFetchProvider = FutureProvider.family<List<Channel>, String>((ref, url) async {
+  final items = await M3UParser().fetchAndParse(url);
   
-  // Transform standard M3U models into rich indexed dashboard channel objects
-  final mapped = List<Channel>.generate(channels.length, (index) => Channel(
-    id: index.toString(),
-    name: channels[index].name,
-    streamUrl: channels[index].streamUrl,
-    logoUrl: channels[index].logoUrl,
-    groupTitle: channels[index].groupTitle,
-  ));
+  final builtList = List<Channel>.generate(items.length, (idx) {
+    final raw = items[idx];
+    final title = raw.name;
+    final lowerTitle = title.toLowerCase();
+    final lowerCat = raw.groupTitle.toLowerCase();
+
+    // Context Inference: Sort entries using structural token attributes
+    MediaType autoType = MediaType.live;
+    String cleanTitle = title;
+    String year = '2025';
+    String length = '2h 05m';
+
+    if (lowerTitle.contains('s01') || lowerTitle.contains('s02') || lowerTitle.contains('e01') || lowerCat.contains('series') || lowerCat.contains('seasons')) {
+      autoType = MediaType.series;
+      length = 'Season 1';
+    } else if (lowerCat.contains('movie') || lowerCat.contains('cinema') || lowerTitle.contains('.mp4') || lowerTitle.contains('.mkv') || RegExp(r'\b(19|20)\d{2}\b').hasMatch(lowerTitle)) {
+      autoType = MediaType.movie;
+      final match = RegExp(r'\b((19|20)\d{2})\b').firstMatch(lowerTitle);
+      if (match != null) {
+        year = match.group(1)!;
+      }
+    }
+
+    return Channel(
+      id: 'item_$idx',
+      name: cleanTitle,
+      streamUrl: raw.streamUrl,
+      logoUrl: raw.logoUrl,
+      groupTitle: raw.groupTitle.isEmpty ? 'General' : raw.groupTitle,
+      type: autoType,
+      currentProgram: autoType == MediaType.live ? 'Live Broadcast Transmission Feed' : cleanTitle,
+      releaseYear: year,
+      durationOrSeasons: length,
+      rating: ((70 + (idx % 25)) / 10).toStringAsFixed(1), // Balanced mock calculations for visual density
+    );
+  });
+
+  ref.read(rawChannelsProvider.notifier).state = builtList;
   
-  ref.read(rawChannelsProvider.notifier).state = mapped;
-  return mapped;
+  // Prime the first category cluster automatically
+  if (builtList.isNotEmpty) {
+    final initial = builtList.first;
+    ref.read(activeModuleProvider.notifier).state = initial.type;
+    ref.read(activeCategoryProvider.notifier).state = initial.groupTitle;
+  }
+  
+  return builtList;
 });
