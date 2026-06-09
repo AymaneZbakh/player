@@ -11,17 +11,17 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
-  late final Player player;
-  late final VideoController controller;
+  late final Player _player;
+  late final VideoController _videoController;
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    player = Player();
-    controller = VideoController(player);
+    _player = Player();
+    _videoController = VideoController(_player);
 
-    player.open(Media(widget.channel.streamUrl.trim()));
+    _player.open(Media(widget.channel.streamUrl.trim()));
     setState(() {
       _isInitialized = true;
     });
@@ -29,7 +29,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
-    player.dispose();
+    _player.dispose(); // Explicitly clear native memory handles to prevent process bloat on Windows
     super.dispose();
   }
 
@@ -39,7 +39,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       color: Colors.black,
       child: Center(
         child: _isInitialized
-            ? Video(controller: controller)
+            ? Video(controller: _videoController)
             : const CircularProgressIndicator(color: Color(0xFF3B82F6)),
       ),
     );
