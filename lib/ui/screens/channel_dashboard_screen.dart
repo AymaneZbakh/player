@@ -33,6 +33,7 @@ class ChannelDashboardScreen extends ConsumerWidget {
   }
 }
 
+// ── PANEL 1: SIDEBAR NAVIGATION DOCK ──────────────────────────────────────────
 class _LeftNavigationDock extends ConsumerWidget {
   const _LeftNavigationDock();
 
@@ -131,6 +132,7 @@ class _LeftNavigationDock extends ConsumerWidget {
   }
 }
 
+// ── PANEL 2: MIDDLE MEDIA BROWSER OVERLAY ──────────────────────────────────────
 class _MiddleMediaBrowser extends ConsumerWidget {
   const _MiddleMediaBrowser();
 
@@ -234,6 +236,7 @@ class _MiddleMediaBrowser extends ConsumerWidget {
   }
 }
 
+// ── PANEL 3: RIGHT WORKSPACE PRODUCTION STAGE ──────────────────────────────────
 class _RightExecutionStage extends ConsumerWidget {
   const _RightExecutionStage();
 
@@ -269,7 +272,17 @@ class _RightExecutionStage extends ConsumerWidget {
                     const SizedBox(height: 12),
                     Text('Release Context: ${activeChannel.releaseYear}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
                     const SizedBox(height: 6),
-                    Text('Rating Track: ${activeChannel.rating}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text('Length/Duration: ${activeChannel.durationOrSeasons}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 6),
+                    Text('Rating Track: ⭐ ${activeChannel.rating}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    const Divider(height: 24, color: Color(0xFF1E232A)),
+                    const Text('PLOT SUMMARY', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Text(activeChannel.plotSummary, style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.4)),
+                      ),
+                    ),
                   ],
                 ),
               )
@@ -281,12 +294,20 @@ class _RightExecutionStage extends ConsumerWidget {
           child: Container(
             color: const Color(0xFF0C0E12),
             padding: const EdgeInsets.all(16),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ELECTRONIC CHANNEL GUIDE TRACKS (EPG)', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
-                SizedBox(height: 12),
-                Expanded(child: Center(child: Text('Synchronized timeline guide processing active...', style: TextStyle(color: Colors.white12, fontSize: 11)))),
+                const Text('ELECTRONIC CHANNEL GUIDE TRACKS (EPG)', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                if (activeChannel.type == MediaType.live) ...[
+                  Text('Now Playing: ${activeChannel.currentProgram}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 4),
+                  LinearProgressIndicator(value: activeChannel.programProgress, backgroundColor: Colors.white10, color: const Color(0xFF10B981)),
+                  const SizedBox(height: 8),
+                  Text('Next: ${activeChannel.nextProgram}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                ] else ...[
+                  const Expanded(child: Center(child: Text('EPG timelines are disabled for VOD assets.', style: TextStyle(color: Colors.white12, fontSize: 11)))),
+                ],
               ],
             ),
           ),
