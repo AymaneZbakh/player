@@ -1,84 +1,77 @@
-import 'dart:async';
-import 'package:http/http.dart' as http;
-import '../models/channel.dart';
+import 'dart:convert';
+import '../../data/models/channel.dart';
 
 class M3UParser {
-  // Increased timeout to 60 seconds to support massive IPTV provider files
-  static const _timeout = Duration(seconds: 60);
+  List<Channel> parseString(String m3uContent) {
+    final List<Channel> channels = [];
+    final List<String> lines = const LineSplitter().convert(m3uContent);
+    
+    String? currentGroup;
+    String? currentLogo;
+    String? currentName;
 
-  Future<List<Channel>> fetchAndParse(String url) async {
-    final uri = Uri.tryParse(url.trim());
-    if (uri == null || !uri.hasScheme) {
-      throw Exception('Invalid URL format. Make sure it starts with http:// or https://');
-    }
-
-    final http.Response response;
-    try {
-      response = await http.get(
-        uri, 
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'Accept': '*/*',
-        },
-      ).timeout(_timeout);
-    } on TimeoutException {
-      throw Exception('The server took too long to respond. The playlist file might be too large or the link is temporarily offline. Try again.');
-    } catch (e) {
-      throw Exception('Network connection error: $e');
-    }
-
-    if (response.statusCode != 200) {
-      throw Exception('Server returned error code ${response.statusCode}. Please verify your IPTV link.');
-    }
-
-    final body = response.body;
-    if (!body.trimLeft().startsWith('#EXTM3U')) {
-      throw Exception('The link provided does not point to a valid M3U IPTV playlist file.');
-    }
-
-    return _parse(body);
-  }
-
-  List<Channel> _parse(String content) {
-    final channels = <Channel>[];
-    final lines = content.split(RegExp(r'\r?\n'));
-
-    String? pendingName;
-    String? pendingLogo;
-    String? pendingGroup;
+    int fallbackIdCounter = 0;
 
     for (var line in lines) {
-      line = line.trim();
-      if (line.isEmpty || line == '#EXTM3U') continue;
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) continue;
 
-      if (line.startsWith('#EXTINF:')) {
-        pendingName = RegExp('group-title="([^"]*)"').hasMatch(line) 
-            ? (RegExp('title="([^"]*)"').firstMatch(line)?.group(1) ?? _extractFallbackName(line))
-            : _extractFallbackName(line);
-            
-        pendingLogo = RegExp('tvg-logo="([^"]*)"').firstMatch(line)?.group(1);
-        pendingGroup = RegExp('group-title="([^"]*)"').firstMatch(line)?.group(1) ?? 'Uncategorized';
-      } else if (!line.startsWith('#')) {
-        if (line.isNotEmpty) {
-          channels.add(Channel(
-            name: pendingName ?? 'Unknown Channel',
-            streamUrl: line,
-            logoUrl: pendingLogo,
-            groupTitle: pendingGroup ?? 'Uncategorized',
-          ));
+      if (trimmed.startsWith('#EXTINF:')) {
+        // Group extraction
+        final groupMatch = RegExp(r'group-title="([^"]+)"').firstMatch(trimmed);
+        currentGroup = groupMatch?.group(1);
+
+        // Logo extraction
+        final logoMatch = RegExp(r'tvg-logo="([^"]+)"').firstMatch(trimmed);
+        currentLogo = logoMatch?.group(1);
+
+        // Name extraction (everything after the last comma)
+        final commaIndex = trimmed.lastIndexOf(',');
+        if (commaIndex != -1) {
+          currentName = trimmed.substring(commaIndex + 1).trim();
         }
-        pendingName = null;
-        pendingLogo = null;
-        pendingGroup = null;
+      } else if (!trimmed.startsWith('#') && currentName != null) {
+        // This is the stream URL line
+        final streamUrl = trimmed;
+        final id = 'parsed_stream_${fallbackIdCounter++}';
+
+        // Context Inference to sort into Live, Movie, or Series
+        final lowerTitle = currentName.toLowerCase();
+        final lowerGroup = (currentGroup ?? '').toLowerCase();
+        MediaType autoType = MediaType.live;
+        String year = '2026';
+
+        if (lowerTitle.contains('s01') || lowerTitle.contains('s02') || lowerTitle.contains('e01') || lowerGroup.contains('series')) {
+          autoType = MediaType.series;
+        } else if (lowerGroup.contains('movie') || lowerTitle.contains('.mp4') || lowerTitle.contains('.mkv') || RegExp(r'\b(19|20)\d{2}\b').hasMatch(lowerTitle)) {
+          autoType = MediaType.movie;
+          final match = RegExp(r'\b((19|20)\d{2})\b').firstMatch(lowerTitle);
+          if (match != null) {
+            year = match.group(1)!;
+          }
+        }
+
+        channels.add(
+          Channel(
+            id: id, // Explicitly providing the required named id parameter
+            name: currentName,
+            streamUrl: streamUrl,
+            logoUrl: currentLogo,
+            groupTitle: currentGroup ?? 'General',
+            type: autoType,
+            currentProgram: autoType == MediaType.live ? 'Live Broadcast Feed' : currentName,
+            releaseYear: year,
+            rating: ((72 + (fallbackIdCounter % 20)) / 10).toStringAsFixed(1),
+          ),
+        );
+
+        // Reset variables for the next entry loop iteration
+        currentGroup = null;
+        currentLogo = null;
+        currentName = null;
       }
     }
-    return channels;
-  }
 
-  String _extractFallbackName(String line) {
-    if (line.contains(',')) {
-      return line.substring(line.lastIndexOf(',') + 1).trim();
-    }
-    return 'Live Stream';
+    return channels;
   }
 }
