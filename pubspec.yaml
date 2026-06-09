@@ -1,0 +1,27 @@
+name: iptv_player
+description: "A production ready Windows IPTV player container."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.2.0
+  http: ^1.2.1
+  shared_preferences: ^2.2.3
+  cached_network_image: ^3.3.1
+  media_kit: ^1.1.10
+  media_kit_video: ^1.1.11
+  media_kit_libs_windows_video: ^1.1.10
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
