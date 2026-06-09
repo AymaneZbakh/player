@@ -18,7 +18,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
-    player = Player(configuration: const PlayerConfiguration());
+    player = Player();
     controller = VideoController(player);
 
     player.open(Media(widget.channel.streamUrl.trim()));
@@ -39,7 +39,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       color: Colors.black,
       child: Center(
         child: _isInitialized
-            ? Video(controller: controller, controls: MaterialVideoControls)
+            ? Video(controller: controller)
             : const CircularProgressIndicator(color: Color(0xFF3B82F6)),
       ),
     );
