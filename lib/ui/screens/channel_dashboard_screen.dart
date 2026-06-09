@@ -19,14 +19,14 @@ class ChannelDashboardScreen extends ConsumerWidget {
       body: asyncFetch.when(
         loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6))),
         error: (err, _) => Center(child: Text('Stream Processing Error: $err', style: const TextStyle(color: Colors.redAccent))),
-        // FIX: Accept the channels argument properly into the callback function signature
-        data: (channels) => const Row(
+        // FIX: Removed 'const' from the Row instantiation to fix callback type mapping errors
+        data: (channels) => Row(
           children: [
-            _LeftNavigationDock(),
-            VerticalDivider(width: 1, thickness: 1, color: Color(0xFF1E232A)),
-            _MiddleMediaBrowser(),
-            VerticalDivider(width: 1, thickness: 1, color: Color(0xFF1E232A)),
-            Expanded(child: _RightExecutionStage()),
+            const _LeftNavigationDock(),
+            const VerticalDivider(width: 1, thickness: 1, color: Color(0xFF1E232A)),
+            const _MiddleMediaBrowser(),
+            const VerticalDivider(width: 1, thickness: 1, color: Color(0xFF1E232A)),
+            const Expanded(child: _RightExecutionStage()),
           ],
         ),
       ),
