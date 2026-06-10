@@ -24,16 +24,16 @@ class PlaylistsNotifier extends StateNotifier<List<Playlist>> {
   }
 }
 
-// UI State Selectors
+// Global UI Layout Selectors
 final activeModuleProvider = StateProvider<MediaType>((ref) => MediaType.live);
 final activeCategoryProvider = StateProvider<String?>((ref) => null);
 final searchFilterProvider = StateProvider<String>((ref) => '');
 final selectedChannelProvider = StateProvider<Channel?>((ref) => null);
 
-// In-Memory Master List
+// Master Array Cache
 final rawChannelsProvider = StateProvider<List<Channel>>((ref) => []);
 
-// Core Pipeline Fetcher
+// HTTP Async Playlist Fetcher
 final channelsFetchProvider = FutureProvider.family<List<Channel>, String>((ref, url) async {
   final response = await http.get(Uri.parse(url));
   if (response.statusCode == 200) {
@@ -41,10 +41,10 @@ final channelsFetchProvider = FutureProvider.family<List<Channel>, String>((ref,
     ref.read(rawChannelsProvider.notifier).state = parsed;
     return parsed;
   }
-  throw Exception('Failed to fetch M3U playlist from source target.');
+  throw Exception('Failed to fetch playlist contents.');
 });
 
-// Compound Filtering Pipeline
+// Real-time Pipeline Processing
 final processedChannelsProvider = Provider<List<Channel>>((ref) {
   final allChannels = ref.watch(rawChannelsProvider);
   final module = ref.watch(activeModuleProvider);
