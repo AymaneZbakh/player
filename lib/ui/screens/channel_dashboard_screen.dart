@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../data/models/playlist.dart';
-import '../../data/models/channel.dart';
-import '../../providers/playlist_provider.dart';
-import 'player_screen.dart';
+import 'package:iptv_player/data/models/playlist.dart';
+import 'package:iptv_player/data/models/channel.dart';
+import 'package:iptv_player/providers/playlist_provider.dart';
+import 'package:iptv_player/ui/screens/player_screen.dart';
 
 class ChannelDashboardScreen extends ConsumerWidget {
   final Playlist playlist;
