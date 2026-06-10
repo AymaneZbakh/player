@@ -1,5 +1,5 @@
 import 'dart:convert';
-import '../models/channel.dart';
+import 'package:iptv_player/data/models/channel.dart';
 
 class M3UParser {
   List<Channel> parseString(String m3uContent) {
