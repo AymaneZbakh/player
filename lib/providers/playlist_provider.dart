@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import '../data/models/channel.dart';
 import '../data/models/playlist.dart';
 import '../data/parsers/m3u_parser.dart';
@@ -23,82 +24,37 @@ class PlaylistsNotifier extends StateNotifier<List<Playlist>> {
   }
 }
 
-// Global UI Layout Navigation Selectors
+// UI State Selectors
 final activeModuleProvider = StateProvider<MediaType>((ref) => MediaType.live);
 final activeCategoryProvider = StateProvider<String?>((ref) => null);
 final searchFilterProvider = StateProvider<String>((ref) => '');
 final selectedChannelProvider = StateProvider<Channel?>((ref) => null);
-final customFoldersProvider = StateProvider<List<String>>((ref) => ['⭐ Favorite Channels', '🎬 Watch Later', '🎵 Music Mix']);
 
-// In-Memory Master Array Registry
+// In-Memory Master List
 final rawChannelsProvider = StateProvider<List<Channel>>((ref) => []);
 
-// High-Density Core Processor: Filters on type, sub-category tabs, and query text simultaneously
-final processedChannelsProvider = Provider<List<Channel>>((ref) {
-  final channels = ref.watch(rawChannelsProvider);
-  final activeMod = ref.watch(activeModuleProvider);
-  final activeCat = ref.watch(activeCategoryProvider);
-  final search = ref.watch(searchFilterProvider).toLowerCase();
-
-  return channels.where((ch) {
-    if (ch.type != activeMod) return false;
-    if (activeCat != null && ch.groupTitle != activeCat) return false;
-    if (search.isNotEmpty) {
-      return ch.name.toLowerCase().contains(search) || ch.groupTitle.toLowerCase().contains(search);
-    }
-    return true;
-  }).toList();
+// Core Pipeline Fetcher
+final channelsFetchProvider = FutureProvider.family<List<Channel>, String>((ref, url) async {
+  final response = await http.get(Uri.parse(url));
+  if (response.statusCode == 200) {
+    final parsed = M3UParser().parseString(response.body);
+    ref.read(rawChannelsProvider.notifier).state = parsed;
+    return parsed;
+  }
+  throw Exception('Failed to fetch M3U playlist from source target.');
 });
 
-// Intelligent Streaming Intake Parser Pipeline
-final channelsFetchProvider = FutureProvider.family<List<Channel>, String>((ref, url) async {
-  final items = await M3UParser().fetchAndParse(url);
-  
-  final builtList = List<Channel>.generate(items.length, (idx) {
-    final raw = items[idx];
-    final title = raw.name;
-    final lowerTitle = title.toLowerCase();
-    final lowerCat = raw.groupTitle.toLowerCase();
+// Compound Filtering Pipeline
+final processedChannelsProvider = Provider<List<Channel>>((ref) {
+  final allChannels = ref.watch(rawChannelsProvider);
+  final module = ref.watch(activeModuleProvider);
+  final category = ref.watch(activeCategoryProvider);
+  final query = ref.watch(searchFilterProvider).toLowerCase();
 
-    // Context Inference: Sort entries using structural token attributes
-    MediaType autoType = MediaType.live;
-    String cleanTitle = title;
-    String year = '2025';
-    String length = '2h 05m';
-
-    if (lowerTitle.contains('s01') || lowerTitle.contains('s02') || lowerTitle.contains('e01') || lowerCat.contains('series') || lowerCat.contains('seasons')) {
-      autoType = MediaType.series;
-      length = 'Season 1';
-    } else if (lowerCat.contains('movie') || lowerCat.contains('cinema') || lowerTitle.contains('.mp4') || lowerTitle.contains('.mkv') || RegExp(r'\b(19|20)\d{2}\b').hasMatch(lowerTitle)) {
-      autoType = MediaType.movie;
-      final match = RegExp(r'\b((19|20)\d{2})\b').firstMatch(lowerTitle);
-      if (match != null) {
-        year = match.group(1)!;
-      }
-    }
-
-    return Channel(
-      id: 'item_$idx',
-      name: cleanTitle,
-      streamUrl: raw.streamUrl,
-      logoUrl: raw.logoUrl,
-      groupTitle: raw.groupTitle.isEmpty ? 'General' : raw.groupTitle,
-      type: autoType,
-      currentProgram: autoType == MediaType.live ? 'Live Broadcast Transmission Feed' : cleanTitle,
-      releaseYear: year,
-      durationOrSeasons: length,
-      rating: ((70 + (idx % 25)) / 10).toStringAsFixed(1), // Balanced mock calculations for visual density
-    );
-  });
-
-  ref.read(rawChannelsProvider.notifier).state = builtList;
-  
-  // Prime the first category cluster automatically
-  if (builtList.isNotEmpty) {
-    final initial = builtList.first;
-    ref.read(activeModuleProvider.notifier).state = initial.type;
-    ref.read(activeCategoryProvider.notifier).state = initial.groupTitle;
-  }
-  
-  return builtList;
+  return allChannels.where((channel) {
+    final matchesModule = channel.type == module;
+    final matchesCategory = category == null || channel.groupTitle == category;
+    final matchesQuery = query.isEmpty || channel.name.toLowerCase().contains(query);
+    return matchesModule && matchesCategory && matchesQuery;
+  }).toList();
 });
