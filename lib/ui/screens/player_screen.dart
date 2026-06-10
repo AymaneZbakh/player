@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:iptv_player/data/models/channel.dart';
+import '../../data/models/channel.dart';
 
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
@@ -11,17 +11,17 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
-  late final Player _player;
-  late final VideoController _videoController;
+  late final Player player;
+  late final VideoController controller;
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _player = Player();
-    _videoController = VideoController(_player);
+    player = Player(configuration: const PlayerConfiguration());
+    controller = VideoController(player);
 
-    _player.open(Media(widget.channel.streamUrl.trim()));
+    player.open(Media(widget.channel.streamUrl.trim()));
     setState(() {
       _isInitialized = true;
     });
@@ -29,7 +29,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
-    _player.dispose();
+    player.dispose();
     super.dispose();
   }
 
@@ -39,7 +39,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       color: Colors.black,
       child: Center(
         child: _isInitialized
-            ? Video(controller: _videoController)
+            ? Video(controller: controller, controls: MaterialVideoControls)
             : const CircularProgressIndicator(color: Color(0xFF3B82F6)),
       ),
     );
