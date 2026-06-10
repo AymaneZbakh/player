@@ -12,21 +12,20 @@ class ChannelDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final asyncFetch = ref.watch(channelsFetchProvider(playlist.url));
+    final asyncLoad = ref.watch(channelsFetchProvider(playlist.url));
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B0C0E),
-      body: asyncFetch.when(
+      body: asyncLoad.when(
         loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6))),
-        error: (err, _) => Center(child: Text('Stream Processing Error: $err', style: const TextStyle(color: Colors.redAccent))),
-        // FIX: Removed 'const' from the Row instantiation to fix callback type mapping errors
-        data: (channels) => Row(
+        error: (err, _) => Center(child: Text('Data integration breakdown: $err', style: const TextStyle(color: Colors.redAccent))),
+        data: (_) => const Row(
           children: [
-            const _LeftNavigationDock(),
-            const VerticalDivider(width: 1, thickness: 1, color: Color(0xFF1E232A)),
-            const _MiddleMediaBrowser(),
-            const VerticalDivider(width: 1, thickness: 1, color: Color(0xFF1E232A)),
-            const Expanded(child: _RightExecutionStage()),
+            _LeftControlDock(),
+            VerticalDivider(width: 1, thickness: 1, color: Color(0xFF1E232A)),
+            _MiddleMediaBrowser(),
+            VerticalDivider(width: 1, thickness: 1, color: Color(0xFF1E232A)),
+            Expanded(child: _RightWorkspaceStage()),
           ],
         ),
       ),
@@ -34,77 +33,104 @@ class ChannelDashboardScreen extends ConsumerWidget {
   }
 }
 
-// ── PANEL 1: SIDEBAR NAVIGATION DOCK ──────────────────────────────────────────
-class _LeftNavigationDock extends ConsumerWidget {
-  const _LeftNavigationDock();
+// ── COLUMN 1: COLLAPSIBLE SIDEBAR DOCK CONTROLS ──────────────────────────────────
+class _LeftControlDock extends ConsumerWidget {
+  const _LeftControlDock();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeMod = ref.watch(activeModuleProvider);
     final activeCat = ref.watch(activeCategoryProvider);
-    final allStreams = ref.watch(rawChannelsProvider);
+    final allItems = ref.watch(rawChannelsProvider);
+    final userFolders = ref.watch(customFoldersProvider);
 
-    final filteredModuleStreams = allStreams.where((ch) => ch.type == activeMod).toList();
-    final groupMetrics = <String, int>{};
-    for (var ch in filteredModuleStreams) {
-      groupMetrics[ch.groupTitle] = (groupMetrics[ch.groupTitle] ?? 0) + 1;
+    final totalForModule = allItems.where((ch) => ch.type == activeMod).toList();
+    final categoriesMap = <String, int>{};
+    for (var ch in totalForModule) {
+      categoriesMap[ch.groupTitle] = (categoriesMap[ch.groupTitle] ?? 0) + 1;
     }
 
     return Container(
-      width: 260,
+      width: 270,
       color: const Color(0xFF0F1115),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Branding Header
           const Padding(
-            padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
+            padding: EdgeInsets.fromLTRB(20, 24, 20, 16),
             child: Row(
               children: [
-                Icon(Icons.bolt, color: Color(0xFF3B82F6), size: 22),
+                Icon(Icons.bolt, color: Color(0xFF3B82F6), size: 24),
                 SizedBox(width: 8),
-                Text('IPTV ZERO DASHBOARD', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Colors.white, letterSpacing: 0.5)),
+                Text('IPTV PLAYER ZERO', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.0, color: Colors.white)),
               ],
             ),
           ),
+
+          // High-Fidelity Module Switcher
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(color: const Color(0xFF161A22), borderRadius: BorderRadius.circular(8)),
               child: Row(
                 children: [
-                  _moduleSegment(ref, 'Live TV', MediaType.live, activeMod == MediaType.live),
-                  _moduleSegment(ref, 'Movies', MediaType.movie, activeMod == MediaType.movie),
-                  _moduleSegment(ref, 'Series', MediaType.series, activeMod == MediaType.series),
+                  _buildTabItem(ref, 'Live TV', MediaType.live, activeMod == MediaType.live),
+                  _buildTabItem(ref, 'Movies', MediaType.movie, activeMod == MediaType.movie),
+                  _buildTabItem(ref, 'Series', MediaType.series, activeMod == MediaType.series),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
+
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               children: [
+                const Padding(
+                  padding: EdgeInsets.only(left: 12, bottom: 8),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white38, letterSpacing: 0.8),
+                  child: Text('USER FOLDERS'),
+                ),
+                ...userFolders.map((folder) => ListTile(
+                  horizontalTitleGap: 8,
+                  leading: const Icon(Icons.folder_open, color: Colors.amber, size: 16),
+                  title: Text(folder, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                  dense: true,
+                  visualDensity: const VisualDensity(vertical: -2),
+                  onTap: () {},
+                )),
+                const Divider(height: 24, color: Color(0xFF1E232A)),
+                const Padding(
+                  padding: EdgeInsets.only(left: 12, bottom: 8),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white38, letterSpacing: 0.8),
+                  child: Text('STREAM SEGMENTS'),
+                ),
                 ListTile(
                   selected: activeCat == null,
                   selectedTileColor: const Color(0xFF1C222E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  title: const Text('All Streams Context', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  trailing: Text('${filteredModuleStreams.length}', style: const TextStyle(fontSize: 11, color: Colors.white38)),
+                  title: const Text('All Filtered Entries', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  trailing: Text('${totalForModule.length}', style: const TextStyle(fontSize: 11, color: Colors.white38)),
                   dense: true,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                   onTap: () => ref.read(activeCategoryProvider.notifier).state = null,
                 ),
-                const Divider(height: 16, color: Color(0xFF1E232A)),
-                ...groupMetrics.entries.map((meta) {
-                  final check = activeCat == meta.key;
+                ...categoriesMap.entries.map((category) {
+                  final isSelected = activeCat == category.key;
                   return ListTile(
-                    selected: check,
+                    selected: isSelected,
                     selectedTileColor: const Color(0xFF1C222E),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    title: Text(meta.key, style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: Text('${meta.value}', style: const TextStyle(fontSize: 11, color: Colors.white38)),
+                    title: Text(category.key, style: TextStyle(fontSize: 13, color: isSelected ? Colors.white : Colors.white70), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF1E242E), borderRadius: BorderRadius.circular(8)),
+                      child: Text('${category.value}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.white54)),
+                    ),
                     dense: true,
-                    onTap: () => ref.read(activeCategoryProvider.notifier).state = meta.key,
+                    onTap: () => ref.read(activeCategoryProvider.notifier).state = category.key,
                   );
                 }),
               ],
@@ -115,45 +141,46 @@ class _LeftNavigationDock extends ConsumerWidget {
     );
   }
 
-  Widget _moduleSegment(WidgetRef ref, String label, MediaType module, bool active) {
+  Widget _buildTabItem(WidgetRef ref, String text, MediaType target, bool active) {
     return Expanded(
-      child: GestureDetector(
+      child: InkWell(
         onTap: () {
-          ref.read(activeModuleProvider.notifier).state = module;
+          ref.read(activeModuleProvider.notifier).state = target;
           ref.read(activeCategoryProvider.notifier).state = null;
           ref.read(selectedChannelProvider.notifier).state = null;
         },
+        borderRadius: BorderRadius.circular(6),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(color: active ? const Color(0xFF222938) : Colors.transparent, borderRadius: BorderRadius.circular(6)),
-          child: Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: active ? const Color(0xFF3B82F6) : Colors.white38)),
+          child: Text(text, textAlign: TextAlign.center, style: TextStyle(fontSize: 11, fontWeight: active ? FontWeight.bold : FontWeight.w500, color: active ? const Color(0xFF3B82F6) : Colors.white38)),
         ),
       ),
     );
   }
 }
 
-// ── PANEL 2: MIDDLE MEDIA BROWSER OVERLAY ──────────────────────────────────────
+// ── COLUMN 2: HIGH-DENSITY SEARCHABLE MEDIA ROSTER BROWSER ──────────────────────────
 class _MiddleMediaBrowser extends ConsumerWidget {
   const _MiddleMediaBrowser();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final channels = ref.watch(processedChannelsProvider);
-    final selection = ref.watch(selectedChannelProvider);
-    final currentModule = ref.watch(activeModuleProvider);
+    final dataset = ref.watch(processedChannelsProvider);
+    final activeSelection = ref.watch(selectedChannelProvider);
+    final activeModule = ref.watch(activeModuleProvider);
 
     return Container(
-      width: 340,
+      width: 350,
       color: const Color(0xFF111318),
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: TextField(
-              onChanged: (value) => ref.read(searchFilterProvider.notifier).state = value,
+              onChanged: (v) => ref.read(searchFilterProvider.notifier).state = v,
               decoration: InputDecoration(
-                hintText: 'Filter layout indexes...',
+                hintText: 'Filter current index array...',
                 prefixIcon: const Icon(Icons.search, size: 16, color: Colors.white38),
                 isDense: true,
                 fillColor: const Color(0xFF1A1D24),
@@ -162,63 +189,74 @@ class _MiddleMediaBrowser extends ConsumerWidget {
               ),
             ),
           ),
+          
           Expanded(
-            child: channels.isEmpty
-                ? const Center(child: Text('No matching items', style: TextStyle(color: Colors.white24, fontSize: 12)))
-                : currentModule == MediaType.live
+            child: dataset.isEmpty
+                ? const Center(child: Text('No media items match configuration', style: TextStyle(color: Colors.white24, fontSize: 12)))
+                : activeModule == MediaType.live
                     ? ListView.builder(
-                        itemCount: channels.length,
-                        itemBuilder: (context, idx) {
-                          final channel = channels[idx];
-                          final isSelected = selection?.id == channel.id;
+                        itemCount: dataset.length,
+                        itemBuilder: (ctx, i) {
+                          final stream = dataset[i];
+                          final active = activeSelection?.id == stream.id;
                           return Container(
                             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: isSelected ? const Color(0xFF1C2333) : Colors.transparent, borderRadius: BorderRadius.circular(6)),
+                            decoration: BoxDecoration(color: active ? const Color(0xFF1C2333) : Colors.transparent, borderRadius: BorderRadius.circular(6)),
                             child: ListTile(
                               dense: true,
-                              title: Text(channel.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-                              subtitle: Text(channel.currentProgram, style: const TextStyle(fontSize: 11, color: Color(0xFF10B981)), maxLines: 1, overflow: TextOverflow.ellipsis),
-                              onTap: () => ref.read(selectedChannelProvider.notifier).state = channel,
+                              leading: _renderAvatarIcon(stream.logoUrl),
+                              title: Text(stream.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text(stream.currentProgram, style: const TextStyle(fontSize: 11, color: Color(0xFF10B981)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 6),
+                                  LinearProgressIndicator(value: stream.programProgress, minHeight: 2, backgroundColor: Colors.white10, color: const Color(0xFF10B981)),
+                                ],
+                              ),
+                              onTap: () => ref.read(selectedChannelProvider.notifier).state = stream,
                             ),
                           );
                         },
                       )
                     : GridView.builder(
                         padding: const EdgeInsets.all(12),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.72, crossAxisSpacing: 10, mainAxisSpacing: 10),
-                        itemCount: channels.length,
-                        itemBuilder: (context, idx) {
-                          final movie = channels[idx];
-                          final isSelected = selection?.id == movie.id;
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.70, crossAxisSpacing: 10, mainAxisSpacing: 10),
+                        itemCount: dataset.length,
+                        itemBuilder: (ctx, i) {
+                          final media = dataset[i];
+                          final active = activeSelection?.id == media.id;
                           return GestureDetector(
-                            onTap: () => ref.read(selectedChannelProvider.notifier).state = movie,
+                            onTap: () => ref.read(selectedChannelProvider.notifier).state = media,
                             child: Container(
                               decoration: BoxDecoration(
                                 color: const Color(0xFF161A23),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent, width: 2),
+                                border: Border.all(color: active ? const Color(0xFF3B82F6) : Colors.transparent, width: 2),
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Expanded(
-                                    child: movie.logoUrl != null
-                                        ? CachedNetworkImage(imageUrl: movie.logoUrl!, fit: BoxFit.cover, errorWidget: (_, __, ___) => const ColoredBox(color: Colors.black26, child: Icon(Icons.movie, size: 24)))
-                                        : const ColoredBox(color: Colors.black26, child: Icon(Icons.movie, size: 24)),
+                                    child: media.logoUrl != null
+                                        ? CachedNetworkImage(imageUrl: media.logoUrl!, fit: BoxFit.cover, errorWidget: (_, __, ___) => const ColoredBox(color: Colors.black38, child: Icon(Icons.movie, size: 28, color: Colors.white12)))
+                                        : const ColoredBox(color: Colors.black38, child: Icon(Icons.movie, size: 28, color: Colors.white12)),
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.all(6.0),
+                                    padding: const EdgeInsets.all(8.0),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(movie.name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                        const SizedBox(height: 2),
+                                        // This explicit mapping line ensures Movie and Series names display clearly underneath cover art posters
+                                        Text(media.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        const SizedBox(height: 4),
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.between,
                                           children: [
-                                            Text(movie.releaseYear, style: const TextStyle(fontSize: 9, color: Colors.white38)),
-                                            Text('⭐ ${movie.rating}', style: const TextStyle(fontSize: 9, color: Color(0xFF22C55E), fontWeight: FontWeight.bold)),
+                                            Text(media.releaseYear, style: const TextStyle(fontSize: 10, color: Colors.white38)),
+                                            Text('⭐ ${media.rating}', style: const TextStyle(fontSize: 10, color: Color(0xFF22C55E), fontWeight: FontWeight.bold)),
                                           ],
                                         )
                                       ],
@@ -235,85 +273,159 @@ class _MiddleMediaBrowser extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _renderAvatarIcon(String? url) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(4)),
+      child: url != null ? CachedNetworkImage(imageUrl: url, errorWidget: (_, __, ___) => const Icon(Icons.tv, size: 16)) : const Icon(Icons.tv, size: 16, color: Colors.white24),
+    );
+  }
 }
 
-// ── PANEL 3: RIGHT WORKSPACE PRODUCTION STAGE ──────────────────────────────────
-class _RightExecutionStage extends ConsumerWidget {
-  const _RightExecutionStage();
+// ── COLUMN 3: LARGE RUNTIME STAGE AREA (PLAYER + INTERACTIVE SIDE CAR) ───────────
+class _RightWorkspaceStage extends ConsumerWidget {
+  const _RightWorkspaceStage();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeChannel = ref.watch(selectedChannelProvider);
+    final selectedMedia = ref.watch(selectedChannelProvider);
 
-    if (activeChannel == null) {
-      return const Center(child: Text('No Active Video Stream Initialized', style: TextStyle(color: Colors.white24, fontSize: 13)));
+    if (selectedMedia == null) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.movie_filter, size: 64, color: Colors.white10),
+            SizedBox(height: 12),
+            Text('No Active Target Initialized', style: TextStyle(color: Colors.white24, fontSize: 13)),
+          ],
+        ),
+      );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Top Panel Split View
         Expanded(
           flex: 3,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(flex: 3, child: PlayerScreen(key: ValueKey(activeChannel.id), channel: activeChannel)),
+              Expanded(flex: 3, child: PlayerScreen(key: ValueKey(selectedMedia.id), channel: selectedMedia)),
               Container(
-                width: 280,
+                width: 290,
                 color: const Color(0xFF12141A),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(activeChannel.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    Text(selectedMedia.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white)),
                     const SizedBox(height: 4),
-                    Text(activeChannel.groupTitle, style: const TextStyle(color: Color(0xFF3B82F6), fontSize: 11, fontWeight: FontWeight.w500)),
-                    const Divider(height: 24, color: Color(0xFF1E232A)),
-                    const Text('METADATA MANIFEST', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    Text('Release Context: ${activeChannel.releaseYear}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    Text('Length/Duration: ${activeChannel.durationOrSeasons}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    Text('Rating Track: ⭐ ${activeChannel.rating}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                    const Divider(height: 24, color: Color(0xFF1E232A)),
-                    const Text('PLOT SUMMARY', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Text(activeChannel.plotSummary, style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.4)),
+                    Text(selectedMedia.groupTitle, style: const TextStyle(color: Color(0xFF3B82F6), fontSize: 12, fontWeight: FontWeight.bold)),
+                    const Divider(height: 32, color: Color(0xFF1E232A)),
+                    
+                    if (selectedMedia.type == MediaType.live) ...[
+                      const Text('EPG LIVE SCHEDULE', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('Running: ${selectedMedia.currentProgram}', style: const TextStyle(color: Color(0xFF10B981), fontSize: 13, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 6),
+                      Text('Next up: ${selectedMedia.nextProgram}', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                    ] else ...[
+                      const Text('ASSET ATTRIBUTES', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_month, size: 14, color: Colors.white38),
+                          const SizedBox(width: 6),
+                          Text(selectedMedia.releaseYear, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                          const SizedBox(width: 20),
+                          const Icon(Icons.timer_outlined, size: 14, color: Colors.white38),
+                          const SizedBox(width: 6),
+                          Text(selectedMedia.durationOrSeasons, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                        ],
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      const Text('STORYLINE SYNOPSIS', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      Text(selectedMedia.plotSummary, style: const TextStyle(color: Colors.white60, fontSize: 12, height: 1.4)),
+                    ],
+                    
+                    const Spacer(),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A1D24), minimumSize: const Size.fromHeight(42), side: const BorderSide(color: Color(0xFF1E232A))),
+                      onPressed: () {},
+                      icon: const Icon(Icons.add_to_photos, color: Colors.amber, size: 16),
+                      label: const Text('Pin to Workspace Folder', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                    )
                   ],
                 ),
               )
             ],
           ),
         ),
+
+        // Bottom EPG / Playback History Slate Tracker
         Expanded(
           flex: 2,
           child: Container(
             color: const Color(0xFF0C0E12),
-            padding: const EdgeInsets.all(16),
+            border: const Border(top: BorderSide(color: Color(0xFF1E232A))),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('ELECTRONIC CHANNEL GUIDE TRACKS (EPG)', style: TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    const Icon(Icons.analytics_outlined, size: 14, color: Colors.white38),
+                    const SizedBox(width: 6),
+                    Text(selectedMedia.type == MediaType.live ? 'ELECTRONIC CHANNEL TIMELINE PROGRAM GUIDE (EPG)' : 'PLAYBACK LOG FILE RECORDS', style: const TextStyle(fontSize: 10, color: Colors.white38, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                  ],
+                ),
                 const SizedBox(height: 12),
-                if (activeChannel.type == MediaType.live) ...[
-                  Text('Now Playing: ${activeChannel.currentProgram}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 4),
-                  LinearProgressIndicator(value: activeChannel.programProgress, backgroundColor: Colors.white10, color: const Color(0xFF10B981)),
-                  const SizedBox(height: 8),
-                  Text('Next: ${activeChannel.nextProgram}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                ] else ...[
-                  const Expanded(child: Center(child: Text('EPG timelines are disabled for VOD assets.', style: TextStyle(color: Colors.white12, fontSize: 11)))),
-                ],
+                Expanded(
+                  child: ListView(
+                    children: [
+                      _buildEPGCard('08:00 PM', selectedMedia.currentProgram, 'Active primary incoming network presentation vector pipeline stream.', current: true),
+                      _buildEPGCard('09:30 PM', selectedMedia.type == MediaType.live ? selectedMedia.nextProgram : 'Continuous Buffer Sequence Event Logger', 'Next sequential file allocation processing thread block.'),
+                    ],
+                  ),
+                )
               ],
             ),
           ),
         )
       ],
+    );
+  }
+
+  Widget _buildEPGCard(String time, String title, String desc, {bool current = false}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: current ? const Color(0xFF10B981).withOpacity(0.04) : const Color(0xFF13171F),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: current ? const Color(0xFF10B981).withOpacity(0.2) : const Color(0xFF1E232A)),
+      ),
+      child: Row(
+        children: [
+          Text(time, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: current ? const Color(0xFF10B981) : Colors.white38)),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                const SizedBox(height: 2),
+                Text(desc, style: const TextStyle(fontSize: 11, color: Colors.white38)),
+              ],
+            ),
+          )
+        ],
+      ),
     );
   }
 }
