@@ -29,7 +29,7 @@ class Channel {
     this.currentProgram = 'Live Broadcast Stream',
     this.nextProgram = 'Upcoming Scheduled Program',
     this.programProgress = 0.40,
-    this.releaseYear = '2025',
+    this.releaseYear = '2026',
     this.durationOrSeasons = 'N/A',
     this.rating = '7.5',
     this.plotSummary = 'No structural EPG summary metadata or storyline plot information is provided by the active playlist container source feed.',
