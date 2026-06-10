@@ -19,7 +19,6 @@ class ChannelDashboardScreen extends ConsumerWidget {
       body: asyncFetch.when(
         loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6))),
         error: (err, _) => Center(child: Text('Stream Processing Error: $err', style: const TextStyle(color: Colors.redAccent))),
-        // SUCCESS FIX: Explicitly receives the channels data array without breaking functional signatures
         data: (channels) => Row(
           children: [
             const _LeftNavigationDock(),
