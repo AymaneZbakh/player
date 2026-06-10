@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../data/models/channel.dart';
-import '../data/models/playlist.dart';
-import '../data/parsers/m3u_parser.dart';
-import '../data/repositories/playlist_repository.dart';
+import 'package:iptv_player/data/models/channel.dart';
+import 'package:iptv_player/data/models/playlist.dart';
+import 'package:iptv_player/data/parsers/m3u_parser.dart';
+import 'package:iptv_player/data/repositories/playlist_repository.dart';
 
 final playlistsProvider = StateNotifierProvider<PlaylistsNotifier, List<Playlist>>((ref) {
   return PlaylistsNotifier(ref.watch(playlistRepositoryProvider));
