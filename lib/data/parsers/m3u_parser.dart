@@ -16,15 +16,12 @@ class M3UParser {
       if (trimmed.isEmpty) continue;
 
       if (trimmed.startsWith('#EXTINF:')) {
-        // Group extraction
         final groupMatch = RegExp(r'group-title="([^"]+)"').firstMatch(trimmed);
         currentGroup = groupMatch?.group(1);
 
-        // Logo extraction
         final logoMatch = RegExp(r'tvg-logo="([^"]+)"').firstMatch(trimmed);
         currentLogo = logoMatch?.group(1);
 
-        // Name extraction
         final commaIndex = trimmed.lastIndexOf(',');
         if (commaIndex != -1) {
           currentName = trimmed.substring(commaIndex + 1).trim();
@@ -65,7 +62,6 @@ class M3UParser {
           ),
         );
 
-        // Reset state for next iteration
         currentGroup = null;
         currentLogo = null;
         currentName = null;
