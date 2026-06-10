@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import '../../data/models/channel.dart';
+import 'package:iptv_player/data/models/channel.dart';
 
 class PlayerScreen extends StatefulWidget {
   final Channel channel;
@@ -29,7 +29,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
-    _player.dispose(); // Explicitly clear native memory handles to prevent process bloat on Windows
+    _player.dispose();
     super.dispose();
   }
 
