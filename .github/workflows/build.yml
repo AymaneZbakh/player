@@ -1,8 +1,8 @@
-name: Build Windows App
+name: Build Windows EXE
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -10,32 +10,24 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout Repository
+    - Heritage:
       uses: actions/checkout@v4
 
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-
-    - name: Setup Flutter SDK
+    - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
         channel: 'stable'
 
-    - name: Enable and Create Windows Desktop Build Files
-      run: |
-        flutter config --enable-windows-desktop
-        flutter create . --platforms=windows
-
-    - name: Download App Dependencies
+    - name: Install Dependencies
       run: flutter pub get
 
-    - name: Compile Production Windows EXE
+    - name: Enable Windows Build
+      run: flutter config --enable-windows-desktop
+
+    - name: Build Windows Application
       run: flutter build windows --release
 
-    - name: Upload Finished App Folder
+    - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
       with:
         name: IPTV-Player-Windows
